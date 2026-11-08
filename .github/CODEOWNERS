@@ -1,0 +1,5 @@
+# Quien revisa los cambios de datos y de cálculo. Reemplace por usuarios o equipos reales de CORPONOR.
+# Ejemplo:  /datos/crudos/  @corponor/revisores-calidad-aire
+/datos/crudos/   @civanrp86-ops
+/tools/          @civanrp86-ops
+/assets/         @civanrp86-ops

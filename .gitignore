@@ -1,0 +1,13 @@
+# Resultados que reconstruye el flujo automático
+datos/historico.js
+datos/historico.csv
+datos/auditoria_codigos.csv
+datos/informe_validacion.md
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+# Sistema
+.DS_Store
+Thumbs.db

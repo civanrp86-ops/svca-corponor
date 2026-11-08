@@ -1,0 +1,36 @@
+name: Validar datos
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: tools/requirements.txt
+      - run: pip install -r tools/requirements.txt
+      - name: Pruebas automáticas
+        run: python -m pytest -q
+      - name: Construir y validar los reportes crudos
+        run: python tools/construir_datos.py --estricto
+      - name: Informe de validación en el resumen de la ejecución
+        if: always()
+        run: |
+          if [ -f datos/informe_validacion.md ]; then cat datos/informe_validacion.md >> "$GITHUB_STEP_SUMMARY"; fi
+      - name: Guardar informe y auditoría
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validacion
+          path: |
+            datos/informe_validacion.md
+            datos/auditoria_codigos.csv

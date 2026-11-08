@@ -22,7 +22,7 @@ Estas son las reglas que aplican por igual el constructor (`tools/construir_dato
 ## 3. Lo que el tablero no incluye
 * **Precipitación (pluviómetro TP200)**: no se publica. Los valores del equipo traen desbordamientos de 16 bits y códigos de error (65536, 9999, 55537),
   y la fila «Avg» del reporte es en realidad una suma. Se podría recuperar la lluvia diaria, pero CORPONOR decidió no incluirla hasta confirmar su confiabilidad.
-* **Plomo (PB)**: se audita pero no se usa.
+* **Presión barométrica (PB)**: se audita pero no se usa. Ojo: no es plomo; los reportes la traen en mmHg (Centro, El Salado) o hPa (las demás estaciones).
 
 ## 4. Cómo auditar un valor
 1. Busque la hora y la estación en `datos/historico.csv`.

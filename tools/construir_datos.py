@@ -199,7 +199,8 @@ def construir(rutas: list[Path]) -> dict:
 def csv_texto(W: pd.DataFrame) -> str:
     X = W.copy()
     X['fecha'] = pd.to_datetime(X.fecha).dt.strftime('%Y-%m-%d %H:%M')
-    return X.to_csv(sep=';', index=False, float_format='%.2f', na_rep='')
+    # lineterminator fijo: en Windows pandas usaría \r\n y la base quedaría distinta según el sistema
+    return X.to_csv(sep=';', index=False, float_format='%.2f', na_rep='', lineterminator='\n')
 
 
 def js_texto(csv: str, n_filas: int, ahora: datetime | None = None) -> str:
@@ -298,8 +299,8 @@ def escribir(res: dict, salida: Path, solo_validar: bool = False) -> None:
     if solo_validar:
         return
     csv = csv_texto(res['W'])
-    (salida / 'historico.csv').write_text(csv, encoding='utf-8')
-    (salida / 'historico.js').write_text(js_texto(csv, len(res['W'])), encoding='utf-8')
+    (salida / 'historico.csv').write_text(csv, encoding='utf-8', newline='')
+    (salida / 'historico.js').write_text(js_texto(csv, len(res['W'])), encoding='utf-8', newline='')
     A = res['auditoria'].copy()
     for c in ('inicio', 'fin'):
         A[c] = pd.to_datetime(A[c]).dt.strftime('%Y-%m-%d %H:%M')
