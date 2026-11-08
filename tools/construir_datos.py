@@ -7,7 +7,8 @@ Uso:
     python tools/construir_datos.py --entrada otra/carpeta --salida salida/
 
 Entrada : reportes multiestación (.csv o .xlsx), promedio de 10 minutos o de 1 hora, uno o varios años.
-          Se procesan en orden alfabético; si dos reportes traen la misma hora, el posterior completa o corrige al anterior.
+          Se aplican por fecha de fin del periodo; si dos reportes traen la misma hora, el que termina más tarde completa o corrige al
+          anterior. NoData o vacíos nunca borran datos ya cargados.
 Salida  : datos/historico.js            base que lee el tablero (CSV comprimido en gzip + base64)
           datos/historico.csv           la misma base en texto, para consulta y descarga
           datos/auditoria_codigos.csv   tramos con NoData, <Samp, 9999999, valores imposibles o texto
@@ -166,10 +167,33 @@ def horario(largas: pd.DataFrame, paso: int) -> pd.DataFrame:
     return pd.concat([N, G[['hora', 'estacion', 'v', 'x']]], ignore_index=True)
 
 
+PERIODO = re.compile(r'(\d{1,2}/\d{1,2}/\d{4} \d{1,2}:\d{2})\s*-\s*(\d{1,2}/\d{1,2}/\d{4} \d{1,2}:\d{2})')
+
+
+def periodo(ruta: Path) -> tuple[datetime, datetime]:
+    """Inicio y fin del periodo que declara el título del reporte («Periodica:01/01/2026 00:00-26/10/2026 00:00»).
+    Si no se puede leer, devuelve fechas mínimas (el archivo se procesa primero)."""
+    try:
+        if ruta.suffix.lower() in ('.xlsx', '.xlsm'):
+            titulo = str(pd.read_excel(ruta, header=None, nrows=1, dtype=object).iloc[0, 0])
+        else:
+            with open(ruta, encoding='latin1') as f:
+                titulo = f.readline()
+        m = PERIODO.search(titulo)
+        a, b = (pd.to_datetime(x[:10], format='%d/%m/%Y') + pd.to_timedelta(int(x[11:].split(':')[0]), unit='h') for x in m.groups())
+        return a.to_pydatetime(), b.to_pydatetime()
+    except Exception:
+        return datetime.min, datetime.min
+
+
 def listar_reportes(entrada: Path) -> list[Path]:
+    """Reportes en el orden en que se aplican: el que termina más tarde va después y, si trae las mismas horas,
+    completa o corrige a los anteriores. Así un reporte diario (2026-11-08.csv) corrige al anual (2026.csv) aunque
+    alfabéticamente vaya antes. Las horas que un reporte trae como NoData nunca borran datos válidos ya cargados."""
     if entrada.is_file():
         return [entrada]
-    return sorted(p for p in entrada.rglob('*') if p.suffix.lower() in ('.csv', '.xlsx', '.xlsm') and not p.name.startswith('.'))
+    rutas = [p for p in entrada.rglob('*') if p.suffix.lower() in ('.csv', '.xlsx', '.xlsm') and not p.name.startswith('.')]
+    return sorted(rutas, key=lambda p: (periodo(p)[1], periodo(p)[0], str(p)))
 
 
 def construir(rutas: list[Path]) -> dict:

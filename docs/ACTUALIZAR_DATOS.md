@@ -1,10 +1,20 @@
-# Actualizar los datos (rutina mensual)
+# Actualizar los datos (diario o mensual)
+
+## Lo esencial
+
+* Cada carga es **un archivo nuevo** en `datos/crudos/AAAA/`. Nunca se borran ni se reemplazan los archivos anteriores:
+  el tablero se reconstruye siempre con **todos** los reportes, así que el histórico completo se conserva.
+* Un reporte nuevo solo **agrega** horas o **corrige** horas que ya existían con un valor válido. Si trae `NoData`, `<Samp` o celdas
+  vacías en horas que ya estaban cargadas, esas horas **no se borran** (hay una prueba automática que lo garantiza).
+* Si dos reportes traen la misma hora, gana el que **termina más tarde** según el periodo de su primera línea
+  («Periodica: … - …»), no el nombre del archivo.
 
 ## Pasos
 
 1. **Exportar** del servidor de monitoreo el reporte multiestación del periodo nuevo (promedio de 1 hora o de 10 minutos).
    Incluya el reporte tal cual: no lo abra ni lo edite en Excel.
-2. **Nombrar** el archivo con el patrón `AAAA-MM_reporte.csv` (por ejemplo `2026-11_reporte.csv`) y guardarlo en `datos/crudos/AAAA/`.
+2. **Nombrar** el archivo con la fecha: diario `AAAA-MM-DD.csv` (por ejemplo `2026-11-08.csv`) o mensual `AAAA-MM_reporte.csv`,
+   y guardarlo en `datos/crudos/AAAA/`. Un nombre único por carga evita reemplazar por error un archivo anterior.
 3. **Pre-validar (opcional)**: abra el tablero, entre al panel de administración y cargue el archivo; verá el mismo tipo de informe de validación
    antes de subir nada.
 4. **Subir en una solicitud de cambios**:
@@ -31,13 +41,14 @@ El sistema **no borra ni corrige** valores (salvo códigos de error y valores f�
 ## Cargar más años (2022 en adelante)
 
 Copie cada reporte anual a `datos/crudos/2022/`, `datos/crudos/2023/`, etc. y suba todo en una sola solicitud de cambios.
-Pueden mezclarse reportes de 10 minutos y de 1 hora. Si dos reportes traen la misma hora, el que está después en orden alfabético completa o corrige al anterior.
+Pueden mezclarse reportes de 10 minutos y de 1 hora. Si dos reportes traen la misma hora, el que termina más tarde completa o corrige al anterior.
 
 ## Corregir una carga equivocada
 
 * Si aún no se unió: cierre la solicitud de cambios.
 * Si ya se publicó: en la solicitud unida pulse `Revert`. Se crea otra solicitud que deshace el cambio y se publica de nuevo el estado anterior.
-* Si el servidor entrega luego un reporte corregido, súbalo con un nombre posterior en orden alfabético.
+* Si el servidor entrega luego un reporte corregido, súbalo como archivo nuevo (por ejemplo `2026-11-08_corregido.csv`): gana por terminar igual o más tarde.
+  Si termina en la misma fecha que el original, el desempate es por nombre, así que use un sufijo como `_corregido`.
 
 ## Usar el panel de administración sin GitHub (solo pruebas)
 

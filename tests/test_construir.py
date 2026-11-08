@@ -88,3 +88,38 @@ def test_solo_validar_no_toca_la_base(tmp_path):
     reporte(entrada / 'r.csv')
     cd.main(['--entrada', str(entrada), '--salida', str(salida), '--solo-validar'])
     assert (salida / 'informe_validacion.md').exists() and not (salida / 'historico.js').exists()
+
+
+# ------------------------------------------------------------------ carga diaria: los datos anteriores no se pierden
+def horario_1h(ruta, desde, hasta, filas):
+    """Reporte de 1 hora con PM2.5 de Comuneros. filas: lista de ('dd/mm/aaaa hh:mm', 'valor')."""
+    enc = [f'Multiestaci?n: Periodica:{desde}-{hasta}  Tipo:AVG 1 Hr.,', ',', 'Fecha & Hora,Barrio Comuneros', ',PM2.5', ',ug/m3']
+    ruta.write_text('\n'.join(enc + [f'{t},{v}' for t, v in filas]), encoding='latin1')
+
+
+def pm25(tmp_path):
+    W = cd.construir(cd.listar_reportes(tmp_path))['W']
+    return dict(zip(W.fecha.dt.strftime('%d/%m %H:%M'), W.pm25))
+
+
+def test_reporte_nuevo_no_borra_datos_anteriores(tmp_path):
+    horario_1h(tmp_path / '2026.csv', '01/01/2026 00:00', '01/01/2026 03:00',
+               [('01/01/2026 01:00', '10'), ('01/01/2026 02:00', '11'), ('01/01/2026 03:00', '12')])
+    # el reporte del día siguiente repite horas como NoData o vacías y agrega una nueva
+    horario_1h(tmp_path / '2026-01-02.csv', '01/01/2026 02:00', '01/01/2026 04:00',
+               [('01/01/2026 02:00', 'NoData'), ('01/01/2026 03:00', ''), ('01/01/2026 04:00', '13')])
+    assert pm25(tmp_path) == {'01/01 01:00': 10, '01/01 02:00': 11, '01/01 03:00': 12, '01/01 04:00': 13}
+
+
+def test_gana_el_reporte_que_termina_mas_tarde_aunque_vaya_antes_alfabeticamente(tmp_path):
+    horario_1h(tmp_path / '2026.csv', '01/01/2026 00:00', '01/01/2026 02:00',
+               [('01/01/2026 01:00', '10'), ('01/01/2026 02:00', '11')])
+    horario_1h(tmp_path / '2026-01-01_corregido.csv', '01/01/2026 01:00', '01/01/2026 03:00',
+               [('01/01/2026 02:00', '20'), ('01/01/2026 03:00', '21')])
+    assert [p.name for p in cd.listar_reportes(tmp_path)] == ['2026.csv', '2026-01-01_corregido.csv']
+    assert pm25(tmp_path) == {'01/01 01:00': 10, '01/01 02:00': 20, '01/01 03:00': 21}
+
+
+def test_periodo_con_hora_24(tmp_path):
+    horario_1h(tmp_path / 'r.csv', '31/12/2025 00:00', '31/12/2025 24:00', [('31/12/2025 24:00', '9')])
+    assert cd.periodo(tmp_path / 'r.csv')[1] == pd.Timestamp('2026-01-01 00:00').to_pydatetime()
