@@ -1,5 +1,8 @@
 # Historial de versiones
 
+## 1.1.1 · 2026-11-09
+- «¿Cuándo está peor el aire?»: selector único de periodo sobre las dos gráficas, con las fechas exactas (desde–hasta) en el encabezado y en el subtítulo de cada gráfica; la gráfica por día de la semana explica qué promedia cada barra.
+
 ## 1.0.0 · 2026-11-04
 
 Primera versión organizada como proyecto.

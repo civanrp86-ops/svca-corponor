@@ -30,8 +30,10 @@
 </div>
 
 <h2>¿Cuándo está peor el aire? · estación <span class="sn"></span></h2>
-<div class="mg"><div class="card"><div class="row"><b>¿A qué hora está peor el aire?</b><select id="sp2" style="margin-left:auto"><option value="720">Últimos 30 días</option><option value="2160">Últimos 90 días</option><option value="8760">Último año</option><option value="0">Todo el histórico</option></select></div><div style="position:relative;height:220px;margin-top:6px"><canvas id="chh"></canvas></div><div class="mut" id="hs"></div></div>
- <div class="card"><b>¿Qué día de la semana está peor?</b><div style="position:relative;height:238px;margin-top:6px"><canvas id="chw"></canvas></div><div class="mut" id="ws"></div></div></div>
+<div class="row" style="margin-bottom:4px"><b>Periodo analizado:</b><select id="sp2"><option value="720">Últimos 30 días</option><option value="2160">Últimos 90 días</option><option value="8760">Último año</option><option value="0">Todo el histórico</option></select><span class="mut" id="perHW"></span></div>
+<div class="mut" style="margin-bottom:8px">Este periodo se aplica a las dos gráficas de abajo y también al resto de los gráficos de estadística.</div>
+<div class="mg"><div class="card"><b id="th">¿A qué hora está peor el aire?</b><div class="mut" id="thp"></div><div style="position:relative;height:220px;margin-top:6px"><canvas id="chh"></canvas></div><div class="mut" id="hs"></div></div>
+ <div class="card"><b id="tw">¿Qué día de la semana está peor?</b><div class="mut" id="twp"></div><div style="position:relative;height:238px;margin-top:6px"><canvas id="chw"></canvas></div><div class="mut" id="ws"></div></div></div>
 <h2>ICA diario · promedio de 24 horas (Res. 2254/2017)</h2>
 <div class="card">
  <div class="row"><button id="pm">‹</button><b id="cmt" style="min-width:150px;text-align:center"></b><button id="nm">›</button><span class="mut">Estación <b class="sn"></b></span></div>
