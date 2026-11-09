@@ -83,7 +83,7 @@ Para exigir que revise una persona concreta, edite `.github/CODEOWNERS` con su u
 1. Suba las fotos a la carpeta `fotos/` (JPG de unos 1280 px de ancho y menos de 400 KB).
 2. Edite `assets/config.js` (ícono del lápiz en GitHub) y quite el `//` de las líneas de `FOTOS_ESTACIONES` con los nombres reales.
 3. La posición de cada estación se ajusta como administrador arrastrándola sobre el mapa (se recuerda en ese navegador). Para dejarla fija
-   para todos, copie los valores a `POS_INICIAL` en `assets/config.js`.
+   para todos, copie las coordenadas a `ESTACIONES_GEO` en `assets/config.js`.
 
 ## 7. Dominio propio e incrustación en la página de CORPONOR
 

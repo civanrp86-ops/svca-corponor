@@ -1,7 +1,14 @@
 # Historial de versiones
 
+## 1.2.0 · 2026-11-09
+- Mapa interactivo (Leaflet + OpenStreetMap, copia local de la librería) con coordenadas reales en `ESTACIONES_GEO`; el administrador arrastra las estaciones y copia las coordenadas.
+- Unidad Móvil con `UBICACIONES_MOVIL`: sitio, municipio, fecha de inicio y foto; funciona en cualquier municipio de Norte de Santander (botón «Ver Unidad Móvil» si está fuera de la vista).
+- El PDF dibuja un croquis de las estaciones a partir de las coordenadas (ya no usa la imagen fija).
+- Coordenadas de las 4 estaciones fijas tomadas del tablero de coordenadas del SVCA (la de Comuneros con 4 decimales por un reflejo en la foto). La Unidad Móvil queda en 7.373323, -72.643921 (Pamplona) desde el 09/11/2026, con el nombre del sitio y la foto por confirmar.
+
 ## 1.1.1 · 2026-11-09
 - «¿Cuándo está peor el aire?»: selector único de periodo sobre las dos gráficas, con las fechas exactas (desde–hasta) en el encabezado y en el subtítulo de cada gráfica; la gráfica por día de la semana explica qué promedia cada barra.
+- Las pruebas ya no escriben informes de ejemplo en el resumen de GitHub Actions: ahí solo aparece el informe real de validación.
 
 ## 1.0.0 · 2026-11-04
 

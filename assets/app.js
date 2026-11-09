@@ -1,7 +1,6 @@
 /* Lógica del tablero SVCA CORPONOR: lectura y validación de reportes, ICA, gráficas, informe PDF y panel de administración. */
-const MW=703,MH=677;
-let POS={...POS_INICIAL},ADM=false,DR=null; // fracciones (x,y) sobre la imagen; el administrador puede arrastrarlas (se recuerdan en este navegador)
-try{const q=JSON.parse(localStorage.getItem('svca_pos'));if(q)POS={...POS,...q}}catch(_){}
+let GEO={...ESTACIONES_GEO},ADM=false,LM=null,LMK={}; // coordenadas [lat,lng] de las estaciones fijas; el administrador puede arrastrarlas (se recuerdan en este navegador)
+try{const q=JSON.parse(localStorage.getItem('svca_geo'));if(q)GEO={...GEO,...q}}catch(_){}
 const PAL={'Centro':'#0f2b43','Comuneros':'#1b7fc0','El Salado':'#7ab800','Punto Blanco':'#e08a00'};
 const $=id=>document.getElementById(id),H=36e5,D=864e5,p2=n=>String(n).padStart(2,'0');
 const MES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
@@ -50,10 +49,30 @@ function cards(){$('cards').innerHTML=ST.map(e=>{const n=now(e),w=metNow(e),s=w&
  ${w?`<div class="mut" style="margin-top:6px;border-top:1px solid var(--line);padding-top:6px">${w.t!=null?w.t.toFixed(1)+' °C':''} ${w.r!=null?'· HR '+w.r+' %':''} ${w.w!=null?'· '+w.w+' m/s':''} ${s!=null?'· Sensación '+s.toFixed(1)+' °C':''}</div>`:''}</div>`}).join('');
  $('cut').textContent=`${fdt(END*H)} ${p2(END%24)}:00 h`;
  $('tabs').innerHTML=ST.map(e=>`<button data-e="${e}" class="${e===SEL?'sel':''}">${e}</button>`).join('')}
-function map(){let g='';ST.forEach(e=>{if(!POS[e])POS[e]=[.5,.5];const n=now(e),x=POS[e][0]*MW,y=POS[e][1]*MH;
-  g+=`<g data-e="${e}"><circle cx="${x}" cy="${y}" r="23" fill="${n.c?n.c[2]:'#b0bcc6'}" stroke="${e===SEL?'#0f2b43':'#fff'}" stroke-width="${e===SEL?5:3.5}"/><text x="${x}" y="${y+6}" text-anchor="middle" font-size="13.5" font-weight="800" fill="${n.c?n.c[3]:'#fff'}">${n.on?HR[e].get(n.l).toFixed(1):'—'}</text>
-  <rect x="${x-44}" y="${y+25}" width="88" height="19" rx="9.5" fill="#0f2b43"/><text x="${x}" y="${y+38.5}" text-anchor="middle" font-size="11.5" font-weight="700" fill="#fff">${e}</text>${n.on?`<text x="${x}" y="${y+58}" text-anchor="middle" font-size="11" font-weight="700" fill="#0f2b43" stroke="#fff" stroke-width="3" paint-order="stroke">ICA ${n.i!=null?n.i:'—'}</text>`:`<text x="${x}" y="${y+58}" text-anchor="middle" font-size="11" font-weight="700" fill="#c62828" stroke="#fff" stroke-width="3" paint-order="stroke">Sin transmisión</text>`}</g>`});
- $('mk').innerHTML=g;$('pos').value=JSON.stringify(POS)}
+// ---- Unidad Móvil: sitio vigente según la fecha del dato que se muestra ----
+function movilUbic(h){const t=(h!=null?h:END)*H,Q=[...UBICACIONES_MOVIL].sort((x,y)=>x.desde<y.desde?-1:1);let u=Q[0];for(const x of Q)if(Date.parse(x.desde+'T00:00:00Z')<=t)u=x;return u}
+const esMovil=e=>/m[óo]vil/i.test(e);
+function coordDe(e){if(esMovil(e)){const u=movilUbic();return u&&u.coord?u.coord:MAPA_CENTRO}
+ if(!GEO[e]){const k=Object.keys(GEO).length;GEO[e]=[MAPA_CENTRO[0]-.004*k,MAPA_CENTRO[1]+.004*k]}return GEO[e]}
+const lejos=c=>Math.hypot((c[0]-MAPA_CENTRO[0])*111,(c[1]-MAPA_CENTRO[1])*110)>25; // km aproximados
+function iniciarMapa(){if(LM||typeof L==='undefined')return;LM=L.map('mapa',{scrollWheelZoom:false,zoomControl:true}).setView(MAPA_CENTRO,MAPA_ZOOM);
+ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(LM);
+ LM.on('click',()=>{if(!LM.scrollWheelZoom.enabled())LM.scrollWheelZoom.enable()})}
+function pinHtml(e,n){const bg=n.c?n.c[2]:'#b0bcc6',fg=n.c?n.c[3]:'#fff',v=n.on?HR[e].get(n.l).toFixed(1):'—';
+ return `<div class="pin${e===SEL?' sel':''}"><div class="c" style="background:${bg};color:${fg}">${v}</div><div class="n">${e}</div>${n.on?`<div class="i">ICA ${n.i!=null?n.i:'—'}</div>`:`<div class="i off">Sin transmisión</div>`}</div>`}
+function map(){iniciarMapa();if(!LM)return;const fijas=[];
+ ST.forEach(e=>{const n=now(e),c=coordDe(e),ic=L.divIcon({className:'',html:pinHtml(e,n),iconSize:[0,0]});
+  let mk=LMK[e];if(!mk){mk=LMK[e]=L.marker(c,{icon:ic,draggable:false,keyboard:true,title:e}).addTo(LM);
+   mk.on('click',()=>abrirFoto(e));
+   mk.on('dragend',()=>{const q=mk.getLatLng();GEO[e]=[+q.lat.toFixed(5),+q.lng.toFixed(5)];try{localStorage.setItem('svca_geo',JSON.stringify(GEO))}catch(_){}map()})}
+  else{mk.setLatLng(c);mk.setIcon(ic)}
+  if(ADM&&!esMovil(e))mk.dragging.enable();else mk.dragging.disable();
+  if(!esMovil(e)||!lejos(c))fijas.push(c)});
+ if(!LM._ajustado&&fijas.length){LM._ajustado=true;LM.fitBounds(fijas,{padding:[60,60],maxZoom:14})}
+ const mv=ST.find(esMovil),u=mv&&movilUbic();
+ $('mapaAv').innerHTML=u&&lejos(coordDe(mv))?`<span class="mut">La Unidad Móvil está en <b>${u.municipio}</b>${u.lugar?' ('+u.lugar+')':''}, fuera de esta vista.</span><button id="verMovil" type="button">Ver Unidad Móvil</button>`:'';
+ const vb=$('verMovil');if(vb)vb.onclick=()=>LM.flyTo(coordDe(mv),12);
+ const o={};ST.forEach(e=>{if(!esMovil(e))o[e]=coordDe(e)});$('pos').value=JSON.stringify(o)}
 const bands={id:'bands',beforeDatasetsDraw(c){const{ctx,chartArea:a,scales:{y}}=c;
  [[0,12,'#00b050'],[12,37,'#ffff00'],[37,55,'#ff9900'],[55,150,'#ff0000'],[150,250,'#7030a0'],[250,500,'#993300']].forEach(([l,h,col])=>{if(l>=y.max)return;
   const y1=y.getPixelForValue(Math.min(h,y.max)),y0=y.getPixelForValue(l);ctx.save();ctx.globalAlpha=.3;ctx.fillStyle=col;ctx.fillRect(a.left,y1,a.right-a.left,y0-y1);ctx.restore()})}};
@@ -159,10 +178,12 @@ async function informe(o){
   tx(s.c?s.c[1]:'Sin dato válido',20,cy+25,{s:7.5,b:1,c:s.c?(s.c[2]==='#ffff00'?'#8a6d00':s.c[2]):'#c62828'});
   par(s.c?MSG[CAT.indexOf(s.c)]:'No hay datos suficientes (mínimo 18 de 24 horas) para calcular el ICA.',20,cy+28.2,88,{s:6,c:GR})});
  // mapa
- const img=document.querySelector('#map image'),mw=84,mh=mw*677/703,mx0=114;
- if(img)try{doc.addImage(img.getAttribute('href'),'JPEG',mx0,y,mw,mh)}catch(_){}
- box(mx0,y,mw,mh,'#c5d3de');ES.forEach(s=>{const p=POS[s.e]||[.5,.5],X=mx0+p[0]*mw,Y=y+p[1]*mh;doc.setFillColor(s.c?s.c[2]:'#b0bcc6');doc.setDrawColor('#ffffff');doc.setLineWidth(.6);doc.circle(X,Y,4,'FD');tx(s.i!=null?s.i:'-',X,Y+1.3,{s:6.5,b:1,c:s.c?s.c[3]:'#fff',a:'center'});rr(X-9,Y+4.6,18,3.8,1.9,NAVY);tx(s.e,X,Y+7.4,{s:5,b:1,c:'#fff',a:'center'})});
- tx('Ubicación de las estaciones (aproximada) e ICA en el corte',mx0,y+mh+4,{s:6.5,c:GR});
+ const mw=84,mh=70,mx0=114,pts=ES.filter(s=>!(esMovil(s.e)&&lejos(coordDe(s.e)))).map(s=>({s,c:coordDe(s.e)})),
+  la=pts.map(q=>q.c[0]),lo=pts.map(q=>q.c[1]),la0=Math.min(...la),la1=Math.max(...la),lo0=Math.min(...lo),lo1=Math.max(...lo),
+  kx=Math.cos(MAPA_CENTRO[0]*Math.PI/180),sw=Math.max((lo1-lo0)*kx,.01),sh=Math.max(la1-la0,.01),esc=Math.min((mw-26)/sw,(mh-24)/sh);
+ doc.setFillColor('#eaf0f5');doc.rect(mx0,y,mw,mh,'F');box(mx0,y,mw,mh,'#c5d3de');
+ pts.forEach(({s,c})=>{const X=mx0+mw/2+((c[1]-(lo0+lo1)/2)*kx)*esc,Y=y+mh/2-(c[0]-(la0+la1)/2)*esc;doc.setFillColor(s.c?s.c[2]:'#b0bcc6');doc.setDrawColor('#ffffff');doc.setLineWidth(.6);doc.circle(X,Y,4,'FD');tx(s.i!=null?s.i:'-',X,Y+1.3,{s:6.5,b:1,c:s.c?s.c[3]:'#fff',a:'center'});rr(X-9,Y+4.6,18,3.8,1.9,NAVY);tx(s.e,X,Y+7.4,{s:5,b:1,c:'#fff',a:'center'})});
+ tx('Croquis de las estaciones (sin escala) e ICA en el corte',mx0,y+mh+4,{s:6.5,c:GR});
  let ly=y+mh+10;tx('Categorías del ICA (Res. 2254/2017)',mx0,ly,{s:8,b:1});CAT.forEach((c,i)=>{rect(mx0,ly+2+i*6.2,6,5,c[2]);tx(RG[i]+'  '+c[1],mx0+8,ly+5.8+i*6.2,{s:6.5})});
  y=y+37*ES.length+2;const off=ES.filter(s=>!s.on);if(off.length){tx('Observaciones',14,y+4,{b:1,s:9});let oy=y+9;off.forEach(s=>{oy=par(`La estación ${s.e} no reporta datos de PM2.5 `+(s.last!=null?'desde el '+dmy(s.last)+'.':'en el periodo consultado.'),14,oy,182,{s:7.8})+1})}
  // ---- 3-4. MEDIA MÓVIL 72 h
@@ -294,7 +315,6 @@ function dl(){const f=v=>v==null?'':v,L=[...ROWS.values()].sort((a,b)=>a.e<b.e?-
  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufefffecha;estacion;pm25;pm10;temperatura;humedad;viento;direccion\n'+L.join('\n')],{type:'text/csv'}));a.download='base_svca_consolidada.csv';a.click()}
 
 $('tabs').onclick=ev=>{const e=ev.target.dataset.e;if(e)sel(e)};
-$('map').onclick=ev=>{const g=ev.target.closest('[data-e]');if(g)sel(g.dataset.e)};
 let T24=[];
 function t24(){const e=SEL,V=h=>HR[e]&&HR[e].get(h),W=h=>MET[e]&&MET[e].get(h),f=x=>x==null?'—':fx(x);
  T24=Array.from({length:24},(_,k)=>END-k).map(h=>{const v=V(h),m=mm(e,h),i=ica(m),w=W(h);let n=0;for(let q=h-23;q<=h;q++)if(V(q)!=null)n++;
@@ -319,9 +339,6 @@ $('al').onclick=()=>{$('pinw').hidden=!$('pinw').hidden};
 $('pb').onclick=()=>{if($('pin').value===ADMIN_CLAVE){ADM=true;$('adm').hidden=false;$('adm').open=true;$('pinw').hidden=true;$('pin').value='';$('adm').scrollIntoView({behavior:'smooth',block:'start'});map()}else $('pin').style.borderColor='#c62828'};
 $('pin').onkeydown=ev=>{if(ev.key==='Enter')$('pb').click()};
 if(location.hash==='#admin')$('pinw').hidden=false;
-$('map').addEventListener('pointerdown',ev=>{MOV=false;const g=ev.target.closest('[data-e]');DOWN=g?g.dataset.e:null;if(!ADM||!g)return;DR=g.dataset.e;$('map').setPointerCapture(ev.pointerId);ev.preventDefault()});
-$('map').addEventListener('pointermove',ev=>{if(!DR)return;MOV=true;const sv=$('map'),pt=sv.createSVGPoint();pt.x=ev.clientX;pt.y=ev.clientY;const q=pt.matrixTransform(sv.getScreenCTM().inverse());POS[DR]=[Math.min(1,Math.max(0,q.x/MW)),Math.min(1,Math.max(0,q.y/MH))];map()});
-$('map').addEventListener('pointerup',()=>{if(DR){DR=null;try{localStorage.setItem('svca_pos',JSON.stringify(POS))}catch(_){}}});
 const idb=(m,v,k='csv')=>new Promise((ok,no)=>{const r=indexedDB.open('svca',1);r.onupgradeneeded=()=>r.result.createObjectStore('k');r.onerror=()=>no(r.error);r.onsuccess=()=>{const t=r.result.transaction('k',m==='get'?'readonly':'readwrite'),st=t.objectStore('k'),q=m==='get'?st.get(k):m==='put'?st.put(v,k):st.delete(k);q.onsuccess=()=>ok(q.result);q.onerror=()=>no(q.error)}});
 function cells(l,sep){const o=[];let c='',q=false;for(const ch of l){if(ch==='"')q=!q;else if(ch===sep&&!q){o.push(c);c=''}else c+=ch}o.push(c);return o.map(x=>x.trim())}
 const LIMV={a:[0,1e9],b:[0,1e9],r:[0,100],w:[0,60],d:[0,360],t:[-10,60]},BS=['a','b','t','r','w','d'];
@@ -408,17 +425,16 @@ const COLN=['VERDE','AMARILLO','NARANJA','ROJO','PÚRPURA','MARRÓN'];
 function icaMini(){$('icam').style.overflowX='auto';$('icam').innerHTML=`<table class="icam"><tr><th colspan="6" class="tt">ÍNDICE CALIDAD DEL AIRE · Capítulo IV Resolución 2254 de 2017</th></tr><tr><th colspan="2">ICA</th><th>COLOR</th><th>CLASIFICACIÓN</th><th colspan="2">PM2.5 24 h µg/m³</th></tr>${BP.map((b,k)=>`<tr style="color:${CAT[k][3]}"><td style="background:${CAT[k][2]}">${b[2]}</td><td style="background:${CAT[k][2]}">${b[3]}</td><td style="background:${CAT[k][2]}">${COLN[k]}</td><td style="background:${CAT[k][2]};text-transform:uppercase">${CAT[k][1]}</td><td class="w">${b[0]}</td><td class="w">${b[1]}</td></tr>`).join('')}</table>`}
 const FOTOS={}; // estación -> imagen (data URI); opcional. Normalmente las fotos se declaran en assets/config.js (FOTOS_ESTACIONES)
 const slug=e=>e.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,'-');
-let MOV=false,DOWN=null; // DOWN: estación donde se presionó (en modo administrador el mapa captura el puntero y el clic llega al mapa, no a la estación)
+
 function cerrarFoto(){$('mdl').hidden=true}
-function abrirFoto(e){const n=now(e),l=n.on?n.l:LAST[e],m=n.on?mm(e,n.l):null,src=FOTOS[e]||FOTOS_ESTACIONES[e],c=n.c;
+function abrirFoto(e){const n=now(e),l=n.on?n.l:LAST[e],m=n.on?mm(e,n.l):null,uM=esMovil(e)?movilUbic():null,src=(uM&&uM.foto)||FOTOS[e]||FOTOS_ESTACIONES[e],c=n.c;
  $('mdf').innerHTML=`<button class="mdx" id="mdx" aria-label="Cerrar">×</button>`;const im=new Image();im.alt='Foto de la estación '+e;
  im.onload=()=>$('mdf').prepend(im);const sinFoto=()=>$('mdf').insertAdjacentHTML('afterbegin',`<div style="padding:20px"><svg width="54" height="54" viewBox="0 0 24 24" fill="none" stroke="#5b7184" stroke-width="1.6"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.6"/></svg><div style="margin-top:6px;font-weight:700">Foto de la estación pendiente</div><div>Se mostrará aquí cuando se cargue</div></div>`);im.onerror=sinFoto;if(src)im.src=src;else sinFoto();
- $('mdb').innerHTML=`<h3>Estación ${e}</h3><div><span style="font-weight:700;color:${n.on?'#2f9e44':'#c62828'}">${n.on?'En línea':'Sin transmisión'}</span>${l!=null?` · último dato: ${lab(l)}`:''}</div>
+ $('mdb').innerHTML=`<h3>Estación ${e}</h3>${uM?`<div class="mut" style="margin:-4px 0 6px">Ubicación actual: <b>${uM.lugar||'por confirmar'}</b>, ${uM.municipio} · desde ${uM.desde.split('-').reverse().join('/')}</div>`:''}<div><span style="font-weight:700;color:${n.on?'#2f9e44':'#c62828'}">${n.on?'En línea':'Sin transmisión'}</span>${l!=null?` · último dato: ${lab(l)}`:''}</div>
  <div class="kv"><div>ICA<b><span style="background:${c?c[2]:'#b0bcc6'};color:${c?c[3]:'#fff'};padding:1px 10px;border-radius:7px">${n.i!=null?n.i:'—'}</span> ${c?'<small style="font-size:12px;font-weight:400">'+c[1]+'</small>':''}</b></div><div>Concentración horaria<b>${n.on?fx(HR[e].get(n.l)):'—'} <small style="font-size:11px;font-weight:400">µg/m³</small></b></div><div>Media móvil 24 h<b>${m!=null?fx(m):'—'} <small style="font-size:11px;font-weight:400">µg/m³</small></b></div></div>
  <div class="mut" style="margin-top:10px">Ubicación aproximada en el mapa. El ICA se obtiene de la media móvil de 24 h según la Resolución 2254 de 2017.</div>`;
  $('mdl').hidden=false;sel(e)}
 $('mdl').addEventListener('click',ev=>{if(ev.target===$('mdl')||ev.target.id==='mdx')cerrarFoto()});document.addEventListener('keydown',ev=>{if(ev.key==='Escape')cerrarFoto()});
-$('map').addEventListener('click',ev=>{if(MOV){MOV=false;DOWN=null;return}const g=ev.target.closest('[data-e]'),e=g?g.dataset.e:DOWN;DOWN=null;if(e)abrirFoto(e)});
 let STG=null;
 async function showLog(){try{const lg=JSON.parse(await idb('get',null,'log')||'[]');$('logv').innerHTML=lg.length?'<p class="mut" style="margin-bottom:2px"><b>Bitácora de cargas</b></p>'+lg.slice(-6).reverse().map(x=>`<div class="mut">${x.f} · validó: ${x.v} · ${x.a} · ${x.p} · ${x.n.toLocaleString('es-CO')} horas-estación</div>`).join(''):''}catch(_){}}
 $('fi').onchange=async ev=>{const fs=[...ev.target.files];ev.target.value='';if(!fs.length)return;const Ps=[],names=[];let msg='';

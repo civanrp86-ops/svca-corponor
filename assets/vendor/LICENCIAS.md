@@ -6,3 +6,6 @@ Se incluyen copias locales para que el tablero no dependa de servicios externos 
 |---|---|---|---|
 | `chart.umd.min.js` | [Chart.js](https://www.chartjs.org/) | 4.4.1 | MIT |
 | `jspdf.umd.min.js` | [jsPDF](https://github.com/parallax/jsPDF) | 2.5.1 | MIT |
+| `leaflet/` | [Leaflet](https://leafletjs.com/) | 1.9.4 | BSD-2-Clause |
+
+El mapa base lo sirve OpenStreetMap (© colaboradores de OpenStreetMap, ODbL); la atribución se muestra en el mapa.
