@@ -123,3 +123,38 @@ def test_gana_el_reporte_que_termina_mas_tarde_aunque_vaya_antes_alfabeticamente
 def test_periodo_con_hora_24(tmp_path):
     horario_1h(tmp_path / 'r.csv', '31/12/2025 00:00', '31/12/2025 24:00', [('31/12/2025 24:00', '9')])
     assert cd.periodo(tmp_path / 'r.csv')[1] == pd.Timestamp('2026-01-01 00:00').to_pydatetime()
+
+
+# ------------------------------------------------------------------ formatos de fecha que deja Excel al reguardar un reporte
+ENC_1H = [
+    'Multiestaci?n: Periodica:01/01/2022 00:00-02/01/2022 00:00  Tipo:AVG 1 Hr.,,,', ',,,',
+    'Fecha & Hora,Barrio Centro,Barrio Centro,Barrio Centro', ',PM10,PM2.5,WS', ',ug/m3,ug/m3,m/s',
+]
+
+
+def test_marcas_de_tiempo_con_numero_de_serie_y_dia_de_un_digito():
+    d = pd.DataFrame({0: ['44562', '01/01/2022 01:00', '3/11/2026 24:00.', '4/11/2026 01:00', '44562.5']})
+    t = cd._marcas_tiempo(d)
+    assert list(t) == [pd.Timestamp('2022-01-01 00:00'), pd.Timestamp('2022-01-01 01:00'), pd.Timestamp('2026-11-04 00:00'),
+                       pd.Timestamp('2026-11-04 01:00'), pd.Timestamp('2022-01-01 12:00')]
+
+
+def test_reporte_horario_con_marcas_de_excel_y_celdas_vacias(tmp_path):
+    filas = ['44562,10,5,1', '01/01/2022 01:00,12,6,1.5', '01/01/2022 02:00,,,', '3/1/2022 24:00.,14,7,2']
+    r = tmp_path / 'excel.csv'
+    r.write_text('\n'.join(ENC_1H + filas), encoding='latin1')
+    p = cd.parsear(r)
+    assert p['registros'] == 4 and p['paso'] == 60
+    L = p['largas']
+    assert sorted(L[(L.v == 'pm25')].fecha.dt.strftime('%Y-%m-%d %H:%M')) == ['2022-01-01 00:00', '2022-01-01 01:00', '2022-01-04 00:00']
+    aud = p['auditoria']
+    assert 'Vacío' in set(aud.codigo) and 'Texto' not in set(aud.codigo)
+
+
+def test_celda_convertida_en_fecha_por_excel_se_excluye_sin_corregir(tmp_path):
+    filas = ['01/01/2022 01:00,12,6,1.5', '01/01/2022 02:00,12,6,01/01/1900 08:38']
+    r = tmp_path / 'danado.csv'
+    r.write_text('\n'.join(ENC_1H + filas), encoding='latin1')
+    p = cd.parsear(r)
+    assert len(p['largas'][p['largas'].v == 'viento']) == 1
+    assert p['codigos'].get('Texto') == 1

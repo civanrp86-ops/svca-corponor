@@ -25,3 +25,12 @@ Pendiente de definir con la oficina jurídica de CORPONOR. Mientras tanto no se 
 
 ## Alcance de los datos
 Los valores son datos de monitoreo del SVCA procesados con las reglas de `docs/REGLAS_DE_CALCULO.md`. La ubicación de las estaciones en el mapa es aproximada.
+
+## Antes de que la dirección autorice la publicación
+Un repositorio público no se puede esconder: cualquiera que tenga el enlace lo ve. Mientras no haya autorización:
+* No comparta el enlace fuera del equipo y úselo solo con quienes participan en la revisión.
+* `index.html` incluye la etiqueta `<meta name="robots" content="noindex, nofollow">`, que pide a los buscadores no mostrar el sitio. Es una cortesía, no una barrera.
+  **Al autorizarse la publicación, bórrela** (está marcada con un comentario «PRE-PUBLICACIÓN»).
+* Si se necesita que nadie lo vea, el repositorio debe pasar a privado (`Settings` → `General` → `Danger Zone` → `Change visibility`). En una cuenta gratuita eso
+  desactiva GitHub Pages; en un plan de pago se puede publicar desde un repositorio privado (verifique las condiciones vigentes en la documentación de GitHub).
+  Para las demostraciones se puede usar la copia local del proyecto, que funciona sin conexión.

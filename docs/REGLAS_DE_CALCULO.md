@@ -11,6 +11,12 @@ Estas son las reglas que aplican por igual el constructor (`tools/construir_dato
   Ningún otro valor se corrige. Todo lo descartado queda en `datos/auditoria_codigos.csv`.
 * Si dos reportes traen la misma hora, el posterior completa o corrige al anterior.
 
+* **Formatos que acepta el lector:** fechas «dd/mm/aaaa hh:mm» con día de uno o dos dígitos (incluida «24:00.» con punto), y los números de serie de Excel
+  que aparecen en las marcas de las 00:00 cuando un reporte se abre y se vuelve a guardar. Una celda que Excel convirtió en fecha (por ejemplo `01/01/1900 08:38`
+  en vez de `1,36`) **no se corrige**: se excluye, queda como «Texto» en la auditoría y conviene volver a exportar ese tramo del servidor.
+* El informe de validación también avisa de tramos con PM2.5 casi nulo (0,1 µg/m³ o menos durante 12 horas o más), que suelen ser fallas del equipo.
+  Se publican tal cual hasta que quien valida decida qué hacer.
+
 ## 2. Media móvil de 24 h y ICA
 * **Media móvil de 24 h**: promedio de las últimas 24 horas, válida con al menos 18 datos.
 * **ICA diario**: ICA del promedio de las 24 horas de un día **cerrado** (marcas 01:00 a 24:00), con al menos 18 horas válidas. Un día en curso no se evalúa.

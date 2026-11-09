@@ -43,7 +43,9 @@ NOMBRE = {'barrio centro': 'Centro', 'barrio comuneros': 'Comuneros', 'barrio el
 VAR = {'PM2.5': 'pm25', 'PM10': 'pm10', 'TEMP': 'temperatura', 'RH': 'humedad', 'WS': 'viento',
        'WD': 'direccion', 'WDIR': 'direccion'}
 AUDITADAS_SIN_USO = {'PB'}            # se auditan (códigos de error) pero no se usan en el tablero
-FECHA = re.compile(r'^\s*"?\d{1,2}/\d{1,2}/\d{4} \d{1,2}:\d{2}')
+# Fila de datos: «dd/mm/aaaa hh:mm» (el día puede traer un solo dígito; «24:00.» con punto final también vale) o un número de serie de Excel
+# de 5 cifras, que es como Excel guarda las marcas de las 00:00 cuando se abre y se vuelve a guardar un reporte.
+FECHA = re.compile(r'^\s*"?(\d{1,2}/\d{1,2}/\d{4} \d{1,2}:\d{2}|[4-5]\d{4}(\.\d+)?\s*"?$)')
 LIM = {'pm25': (0, None), 'pm10': (0, None), 'humedad': (0, 100), 'viento': (0, 60),
        'direccion': (0, 360), 'temperatura': (-10, 60)}
 SENTINELA = 9999990
@@ -80,9 +82,18 @@ def paso_minutos(titulo: str) -> int:
 
 
 def _marcas_tiempo(d: pd.DataFrame) -> pd.Series:
+    """Hora de cierre de cada fila. Acepta «dd/mm/aaaa hh:mm» (día de 1 o 2 dígitos, 24:00 incluido) y números de serie de Excel."""
     f = d[0].astype(str).str.strip().str.strip('"')
-    return (pd.to_datetime(f.str[:10], format='%d/%m/%Y') + pd.to_timedelta(f.str[11:13].astype(int), unit='h')
-            + pd.to_timedelta(f.str[14:16].astype(int), unit='m'))
+    serie = f.str.match(r'^\d{5}(\.\d+)?$')
+    t = pd.Series(pd.NaT, index=f.index, dtype='datetime64[ns]')
+    if serie.any():
+        t[serie] = pd.Timestamp('1899-12-30') + pd.to_timedelta((f[serie].astype(float) * 1440).round(), unit='m')
+    txt = ~serie
+    if txt.any():
+        x = f[txt].str.extract(r'^(\d{1,2})/(\d{1,2})/(\d{4})\s+(\d{1,2}):(\d{2})').astype(int)
+        base = pd.to_datetime(pd.DataFrame({'year': x[2], 'month': x[1], 'day': x[0]}))
+        t[txt] = base + pd.to_timedelta(x[3], unit='h') + pd.to_timedelta(x[4], unit='m')
+    return t
 
 
 def parsear(ruta: Path) -> dict:
@@ -107,7 +118,7 @@ def parsear(ruta: Path) -> dict:
         sx = d[c].astype(str).str.strip()
         x = pd.to_numeric(sx.str.replace(',', '.'), errors='coerce')
         cod = pd.Series('', index=sx.index, dtype=object)
-        vacio = sx.isin(['', 'nan'])
+        vacio = sx.isna() | sx.isin(['', 'nan'])  # pandas 3 conserva los vacíos como nulos; antes eran el texto «nan»
         cod[vacio] = 'Vacío'
         cod[x.isna() & ~vacio] = 'Texto'
         cod[sx.str.match(r'(?i)^no\s*data$')] = 'NoData'
@@ -180,7 +191,7 @@ def periodo(ruta: Path) -> tuple[datetime, datetime]:
             with open(ruta, encoding='latin1') as f:
                 titulo = f.readline()
         m = PERIODO.search(titulo)
-        a, b = (pd.to_datetime(x[:10], format='%d/%m/%Y') + pd.to_timedelta(int(x[11:].split(':')[0]), unit='h') for x in m.groups())
+        a, b = (pd.to_datetime(x.split()[0], format='%d/%m/%Y') + pd.to_timedelta(int(x.split()[1].split(':')[0]), unit='h') for x in m.groups())
         return a.to_pydatetime(), b.to_pydatetime()
     except Exception:
         return datetime.min, datetime.min
@@ -258,7 +269,7 @@ def informe_markdown(res: dict) -> str:
     s = W.set_index('fecha')
     fin = W.fecha.max()
     L += ['', '## Disponibilidad de PM2.5 por estación y año', '', '| Estación | Año | Horas válidas | Horas del periodo | % | Días con ICA | Mayor vacío (h) |', '|---|---|---|---|---|---|---|']
-    avisos_gap, pegadas, picos = [], [], []
+    avisos_gap, pegadas, picos, casi_cero = [], [], [], []
     for e, g in W.groupby('estacion'):
         pm = g.dropna(subset=['pm25'])
         h = ((pm.fecha - pd.Timestamp('1970-01-01')) // pd.Timedelta(hours=1)).to_numpy()
@@ -278,6 +289,19 @@ def informe_markdown(res: dict) -> str:
                     run = 1
             if run >= 12:
                 pegadas.append((e, pm.fecha.iloc[len(h) - run], run, v[-1]))
+            # PM2.5 casi nulo de forma persistente (≤ 0,1 µg/m³): típico de un equipo con falla, no de aire limpio
+            run, ini = 0, 0
+            for i in range(len(h)):
+                if v[i] <= 0.1 and (run == 0 or h[i] == h[i - 1] + 1):
+                    if run == 0:
+                        ini = i
+                    run += 1
+                else:
+                    if run >= 12:
+                        casi_cero.append((e, pm.fecha.iloc[ini], run, float(v[ini:ini + run].max())))
+                    run, ini = (1, i) if v[i] <= 0.1 else (0, 0)
+            if run >= 12:
+                casi_cero.append((e, pm.fecha.iloc[ini], run, float(v[ini:ini + run].max())))
         # picos aislados
         d = dict(zip(h.tolist(), v.tolist()))
         for hh, val in d.items():
@@ -304,6 +328,10 @@ def informe_markdown(res: dict) -> str:
     L += ['', '## Series pegadas (12 horas seguidas o más con exactamente el mismo valor de PM2.5)', '']
     L += (['| Estación | Desde | Horas | Valor (µg/m³) |', '|---|---|---|---|'] +
           [f"| {e} | {a:%d/%m/%Y %H:%M} | {n} | {val:.2f} |" for e, a, n, val in sorted(pegadas, key=lambda x: -x[2])[:15]]) if pegadas else ['Ninguna.']
+    L += ['', '## PM2.5 casi nulo de forma persistente (0,1 µg/m³ o menos durante 12 horas o más)', '',
+          '_En Cúcuta un valor así de bajo y sostenido suele indicar una falla del equipo. Se publica tal cual hasta que quien valida decida qué hacer._', '']
+    L += (['| Estación | Desde | Horas | Máximo en el tramo (µg/m³) |', '|---|---|---|---|'] +
+          [f"| {e} | {a:%d/%m/%Y %H:%M} | {n} | {mx:.2f} |" for e, a, n, mx in sorted(casi_cero, key=lambda x: -x[2])[:15]]) if casi_cero else ['Ninguno.']
     L += ['', '## Picos horarios aislados para revisar', '', '_PM2.5 ≥ 25 µg/m³ y ≥ 3,5 veces la mediana de las horas vecinas. Pueden ser reales (quema, tráfico) o fallas del equipo; decide quien valida._', '']
     L += (['| Estación | Hora (cierre) | PM2.5 (µg/m³) | Mediana vecina |', '|---|---|---|---|'] +
           [f"| {e} | {t:%d/%m/%Y %H:%M} | {val:.1f} | {md:.1f} |" for e, t, val, md in sorted(picos, key=lambda x: -x[2] / x[3])[:20]]
