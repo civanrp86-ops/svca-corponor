@@ -26,7 +26,7 @@ const MAPA_CENTRO=[7.8939,-72.5078], MAPA_ZOOM=12;
 // sea anterior o igual al dato que se muestra. Puede estar en cualquier municipio de Norte de Santander.
 //   desde: 'AAAA-MM-DD' · lugar: nombre del sitio · municipio · coord: [lat, lng] · foto: ruta en fotos/ (opcional)
 const UBICACIONES_MOVIL=[
-  {desde:'2026-11-09', lugar:'Sitio por confirmar', municipio:'Pamplona', coord:[7.373323,-72.643921], foto:''},
+  {desde:'2026-11-09', lugar:'E.S.E Hospital San Juan de Dios de pamplona ', municipio:'Pamplona', coord:[7.373323,-72.643921], foto:''},
   // Cuando se traslade, agregue una fila nueva debajo (no borre las anteriores). Ejemplo:
   // {desde:'2026-12-01', lugar:'Parque principal', municipio:'Ocaña', coord:[8.2371,-73.3560], foto:'fotos/movil-ocana.jpg'},
 ];
