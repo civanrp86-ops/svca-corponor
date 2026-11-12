@@ -1,5 +1,16 @@
 # Historial de versiones
 
+## 1.3.0 · 2026-11-12
+- Tarjetas de estación con medidor semicircular: la aguja (animada) marca el ICA de la media móvil de 24 h y el punto marca la concentración de la última hora en su ICA equivalente (escala 0–200, categorías de la Res. 2254/2017); datos del clima en etiquetas.
+- «Condiciones más recientes»: cada variable con minigráfica de 24 h (al pasar el cursor muestra hora y valor), tendencia de 3 h y brújula del viento; al hacer clic lleva al mapa de calor correspondiente.
+- Nueva sección «Cumplimiento anual por estación · PM2.5»: promedio anual vs. norma nacional y guía OMS, con representatividad temporal (≥ 75 % de las horas).
+
+## 1.2.5 · 2026-11-12
+- La publicación marca con una versión (`?v=…`) los archivos que cambian (app.js, config.js, style.css, historico.js) para que el navegador no use copias viejas guardadas en caché después de cada actualización.
+
+## 1.2.4 · 2026-11-12
+- El informe de validación avisa de «saltos» en la serie: tramos de 3 horas o más en que ninguna estación tiene fila (los últimos 120 días). Detecta cuando al armar el reporte a mano no se copió un tramo.
+
 ## 1.2.3 · 2026-11-12
 - Corregido: la ficha de la estación (con su foto) quedaba por detrás de los controles del mapa; ahora se muestra por encima de todo.
 

@@ -325,6 +325,19 @@ def informe_markdown(res: dict) -> str:
     L += ['', '## Vacíos de PM2.5 de más de 72 horas', '']
     L += (['| Estación | Último dato antes | Primer dato después | Horas sin dato |', '|---|---|---|---|'] +
           [f"| {e} | {a:%d/%m/%Y %H:%M} | {b:%d/%m/%Y %H:%M} | {n} |" for e, a, b, n in sorted(avisos_gap, key=lambda x: -x[3])[:15]]) if avisos_gap else ['Ninguno.']
+    # saltos en la serie: horas en que NINGUNA estación tiene fila (típico de filas que no se pegaron al armar el archivo)
+    ts = pd.Series(sorted(W.fecha.unique()))
+    saltos = []
+    if len(ts) > 1:
+        dh = (ts.diff() / pd.Timedelta(hours=1)).to_numpy()
+        for i in np.where(dh > 3)[0]:
+            a, b = ts.iloc[i - 1], ts.iloc[i]
+            if b >= fin - pd.Timedelta(days=120):
+                saltos.append((a, b, int(dh[i] - 1)))
+    L += ['', '## Saltos recientes en la serie (3 horas o más sin ninguna fila de ninguna estación, últimos 120 días)', '',
+          '_Si el reporte se arma pegando filas a mano, un salto suele ser un tramo que no se copió. Sin esas horas no hay ICA._', '']
+    L += (['| Último dato antes | Primer dato después | Horas que faltan |', '|---|---|---|'] +
+          [f"| {a:%d/%m/%Y %H:%M} | {b:%d/%m/%Y %H:%M} | {n} |" for a, b, n in saltos]) if saltos else ['Ninguno.']
     L += ['', '## Series pegadas (12 horas seguidas o más con exactamente el mismo valor de PM2.5)', '']
     L += (['| Estación | Desde | Horas | Valor (µg/m³) |', '|---|---|---|---|'] +
           [f"| {e} | {a:%d/%m/%Y %H:%M} | {n} | {val:.2f} |" for e, a, n, val in sorted(pegadas, key=lambda x: -x[2])[:15]]) if pegadas else ['Ninguna.']

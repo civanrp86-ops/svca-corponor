@@ -57,3 +57,38 @@ footer{margin-top:22px;color:var(--mut);font-size:12px}footer a{color:var(--blue
 .pin .i.off{color:#c62828}
 .leaflet-container{font-family:inherit}
 #mapa{isolation:isolate}
+
+/* Cumplimiento anual */
+.kps{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}
+.kp{background:#f3f7fa;border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.kp b{display:block;font-size:26px;line-height:1.1;color:#0f2b43}
+.kp span{font-size:12px;color:#51667a}
+.alg{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:#51667a;margin:6px 0 10px}
+.alg i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-2px}
+.at{width:100%;border-collapse:collapse;font-size:13px;margin-top:4px}
+.at th{background:#0f2b43;color:#fff;text-align:left;padding:7px 9px;font-weight:600}
+.at td{padding:7px 9px;border-bottom:1px solid var(--line)}
+.at b.si{color:#00803a}.at b.no{color:#c62828}
+.tw{overflow-x:auto}
+
+/* Medidor de PM2.5 en las tarjetas de estación */
+.gz{margin:4px auto 0;max-width:230px}.gg{width:100%;height:auto;display:block;overflow:visible}
+.nd{transform:rotate(0deg);transform-origin:100px 100px;transition:transform 1.1s cubic-bezier(.2,.8,.2,1)}
+.gv{text-align:center;margin-top:-2px}.gv b{font-size:26px;color:#0f2b43;margin-right:4px}.gv span{font-size:11.5px;color:var(--mut)}
+.gr{display:flex;align-items:center;justify-content:center;gap:10px;margin:6px 0 4px}.gr .cn{font-size:13px;font-weight:700;color:#0f2b43}
+.sc .mut{text-align:center;font-size:12px}
+.chips{display:flex;flex-wrap:wrap;justify-content:center;gap:5px 6px;margin-top:8px;border-top:1px solid var(--line);padding-top:8px}
+.chips span{background:#eef3f7;border-radius:999px;padding:2px 9px;font-size:12px;color:#0f2b43;white-space:nowrap}
+/* Condiciones más recientes */
+.tile{position:relative;cursor:pointer;transition:transform .15s ease,box-shadow .15s ease;outline-offset:2px}
+.tile:hover,.tile:focus-visible{transform:translateY(-2px);box-shadow:0 4px 14px rgba(15,43,67,.14)}
+.tile .tr{font-size:12px;color:#51667a;min-height:16px}
+.tile .spk{display:block;width:100%;height:36px;margin:4px 0 2px;touch-action:pan-y}
+.tile .cmp{position:absolute;top:8px;right:8px;width:44px;height:44px}
+.tile .sub{display:block;min-height:15px}
+.card.flash{animation:flash 1.4s ease}
+@keyframes flash{0%,60%{box-shadow:0 0 0 3px #7ab800}100%{box-shadow:none}}
+@media (prefers-reduced-motion:reduce){.nd,.tile{transition:none}.card.flash{animation:none}}
+.dh{display:inline-block;width:9px;height:9px;border-radius:50%;background:#0f2b43;border:2px solid #fff;box-shadow:0 0 0 1px #0f2b43;margin-right:6px;vertical-align:-1px}
+.gnote{grid-column:1/-1;font-size:12px;color:#51667a;padding:2px 4px}
+.gv span:first-child{margin-right:3px}

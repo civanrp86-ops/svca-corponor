@@ -40,13 +40,26 @@ const dayV=(e,dk)=>{const d=DAY[e]&&DAY[e].get(dk);return d&&d.n>=18?d.s/d.n:nul
 function now(e){const l=LAST[e],on=l!=null&&END-l<=6,m=on?mm(e,l):null,i=ica(m);return{l,on,m,i,c:i!=null?cat(i):null}}
 function metNow(e){const M=MET[e];if(!M)return null;for(let h=END;h>END-4;h--)if(M.has(h))return M.get(h);return null}
 
-function cards(){$('cards').innerHTML=ST.map(e=>{const n=now(e),w=metNow(e),s=w&&at(w.t,w.r,w.w);
+// ---- Medidor semicircular: la aguja marca el ICA (media móvil de 24 h) y el punto, la última hora ubicada en su ICA equivalente (escala 0–200, categorías de la Res. 2254/2017) ----
+const GMAX=200,GTRAMOS=[[0,50,CAT[0][2],CAT[0][1],'0–12'],[50,100,CAT[1][2],CAT[1][1],'13–37'],[100,150,CAT[2][2],CAT[2][1],'38–55'],[150,200,CAT[3][2],CAT[3][1],'56–150']];
+const gpt=(v,r)=>{const t=Math.PI*(1-v/GMAX);return[100+r*Math.cos(t),100-r*Math.sin(t)]};
+function gauge(e,n,hv){const ok=n.i!=null,v=ok?Math.min(GMAX,Math.max(0,n.i)):0,f=q=>q.toFixed(2),
+ arcs=GTRAMOS.map(([a,b,c,t,u])=>{const[x0,y0]=gpt(a,78),[x1,y1]=gpt(b,78);return`<path d="M${f(x0)} ${f(y0)} A78 78 0 0 1 ${f(x1)} ${f(y1)}" stroke="${c}" stroke-width="15" fill="none" opacity="${ok?1:.3}"><title>${t}: ICA ${a+(a?1:0)}–${b} (PM2.5 ${u} µg/m³)</title></path>`}).join(''),
+ tk=[50,100,150].map(q=>{const[x,y]=gpt(q,95);return`<text x="${f(x)}" y="${f(y)}" font-size="9" fill="#51667a" text-anchor="middle" dominant-baseline="middle">${q}</text>`}).join(''),
+ hi=hv!=null?ica(hv):null,
+ dot=ok&&hi!=null?(([x,y])=>`<circle cx="${f(x)}" cy="${f(y)}" r="5" fill="#0f2b43" stroke="#fff" stroke-width="2"><title>Última hora: ${hv.toFixed(1)} µg/m³ (ICA equivalente ${hi})</title></circle>`)(gpt(Math.min(GMAX,hi),78)):'';
+ return`<svg class="gg" viewBox="0 0 200 118" role="img" aria-label="${ok?`Estación ${e}: ICA ${n.i}, ${n.c?n.c[1]:''}, con media móvil de 24 horas de ${n.m.toFixed(1)} microgramos por metro cúbico`:`Estación ${e}: sin dato válido`}">${arcs}${tk}${dot}
+ ${ok?`<g class="nd" data-a="${(180*v/GMAX).toFixed(1)}"><path d="M100 95.5 L30 100 L100 104.5 Z" fill="#0f2b43"/></g>`:''}<circle cx="100" cy="100" r="6.5" fill="${ok?'#0f2b43':'#9aa8b5'}"/>
+ <text x="14" y="114" font-size="9" fill="#51667a" text-anchor="middle">0</text><text x="186" y="114" font-size="9" fill="#51667a" text-anchor="middle">200+</text></svg>`}
+function cards(){$('cards').innerHTML=ST.map(e=>{const n=now(e),w=metNow(e),s=w&&at(w.t,w.r,w.w),h0=n.on?HR[e].get(n.l):null,hv=Number.isFinite(h0)?h0:null;
  return `<div class="sc"><h3>Estación ${e}</h3><div class="st ${n.on?'on':'off'}">${n.on?'● En línea':'● Sin transmisión de PM2.5'+(n.l!=null?' desde '+fdt(n.l*H):'')}</div>
- <div class="kv">Concentración (µg/m³)<b>${n.on?HR[e].get(n.l).toFixed(1):'—'}</b></div>
- <div class="kv">Media móvil (µg/m³)<b>${n.m!=null?n.m.toFixed(1):'—'}</b></div>
- <div class="kv">ICA<span class="ica" style="background:${n.c?n.c[2]:'#e6edf2'};color:${n.c?n.c[3]:'#555'}">${n.i!=null?n.i:'—'}</span></div>
- <div class="mut">${n.c?n.c[1]:'Sin dato válido'}</div>
- ${w?`<div class="mut" style="margin-top:6px;border-top:1px solid var(--line);padding-top:6px">${w.t!=null?w.t.toFixed(1)+' °C':''} ${w.r!=null?'· HR '+w.r+' %':''} ${w.w!=null?'· '+w.w+' m/s':''} ${s!=null?'· Sensación '+s.toFixed(1)+' °C':''}</div>`:''}</div>`}).join('');
+ <div class="gz">${gauge(e,n,hv)}</div>
+ <div class="gv">${n.m!=null?`<span>Media móvil de 24 h:</span> <b>${n.m.toFixed(1)}</b><span>µg/m³</span>`:'<span>Media móvil de 24 h no disponible</span>'}</div>
+ <div class="gr"><span class="ica" style="background:${n.c?n.c[2]:'#e6edf2'};color:${n.c?n.c[3]:'#555'}">${n.i!=null?n.i:'—'}</span><span class="cn">${n.c?n.c[1]:'Sin dato válido'}</span></div>
+ <div class="mut">${n.on&&hv!=null?`<i class="dh"></i>Última hora: <b>${hv.toFixed(1)}</b> µg/m³${ica(hv)!=null?' · ICA '+ica(hv):''}`:'Sin concentración reciente'}</div>
+ ${w?`<div class="chips">${w.t!=null?`<span title="Temperatura">🌡 ${w.t.toFixed(1)} °C</span>`:''}${w.r!=null?`<span title="Humedad relativa">💧 ${Math.round(w.r)} %</span>`:''}${w.w!=null?`<span title="Velocidad del viento">🌬 ${w.w} m/s</span>`:''}${s!=null?`<span title="Sensación térmica">≈ ${s.toFixed(1)} °C</span>`:''}</div>`:''}</div>`}).join('');
+ $('cards').insertAdjacentHTML('beforeend','<div class="gnote"><b>Aguja:</b> ICA calculado con la media móvil de 24 h. <i class="dh"></i><b>Punto:</b> concentración de la última hora, ubicada en su ICA equivalente (solo para comparar con la aguja).</div>');
+ requestAnimationFrame(()=>requestAnimationFrame(()=>document.querySelectorAll('.nd').forEach(g=>g.style.transform=`rotate(${g.dataset.a}deg)`)));
  $('cut').textContent=`${fdt(END*H)} ${p2(END%24)}:00 h`;
  $('tabs').innerHTML=ST.map(e=>`<button data-e="${e}" class="${e===SEL?'sel':''}">${e}</button>`).join('')}
 // ---- Unidad Móvil: sitio vigente según la fecha del dato que se muestra ----
@@ -118,6 +131,28 @@ function heat(){const e=SEL,y=+$('yr').value;let h='<span></span>'+Array.from({l
 function dist(){const y=+$('yr').value;$('dist').innerHTML=ST.map(e=>{const cnt=CAT.map(()=>0);let tot=0;
  if(DAY[e])for(const dk of DAY[e].keys()){if(new Date(dk*D).getUTCFullYear()!==y)continue;const v=ica(dayV(e,dk));if(v==null)continue;cnt[CAT.indexOf(cat(v))]++;tot++}
  return `<div class="db"><span>${e}</span><div class="bar">${tot?cnt.map((n,i)=>n?`<span style="width:${n/tot*100}%;background:${CAT[i][2]};color:${CAT[i][3]}" title="${CAT[i][1]}: ${n} días">${n/tot>.07?Math.round(n/tot*100)+'%':''}</span>`:'').join(''):'<em class="mut" style="padding:4px 8px">Sin datos</em>'}</div><span class="nd">${tot} días válidos</span></div>`}).join('')}
+// ---- Cumplimiento anual de PM2.5 por estación (promedio del año calendario vs. norma nacional y guía de la OMS) ----
+const REF_NACIONAL={2023:{v:14.9,n:83,fuente:'IDEAM, Informe del estado de la calidad del aire en Colombia 2023'}}; // media nacional PM2.5 de las estaciones representativas (solo años con informe)
+const NORMA_ANUAL=25,OMS_ANUAL=5,REPRES=.75; // µg/m³ (Res. 2254/2017 · guía OMS 2021); representatividad: ≥ 75 % de las horas del periodo
+const BANDAS=[[5,'#00b050','≤ 5 (guía OMS)'],[10,'#7ab800','5–10'],[15,'#ffd400','10–15'],[25,'#ff9900','15–25'],[1e9,'#e53935','> 25 (supera la norma nacional)']];
+const bandaA=v=>BANDAS.find(b=>v<=b[0]);
+function anualDe(e,y){const a=Date.UTC(y,0,1,1)/H,b=Math.min(Date.UTC(y+1,0,1)/H,END);if(!HR[e]||b<a)return{n:0,tot:0,m:null,rep:false};
+ let s=0,n=0;for(const[hh,v]of HR[e]){if(hh>=a&&hh<=b&&Number.isFinite(v)){s+=v;n++}}const tot=Math.round(b-a)+1;
+ return{n,tot,m:n?s/n:null,pct:n/tot,rep:n/tot>=REPRES}}
+let CA;
+let YR_A;
+function anual(){const y=+$('yr').value;if(!y||!$('canual'))return;YR_A=y;CA&&CA.destroy();const R=ST.map(e=>({e,...anualDe(e,y)})),ok=R.filter(r=>r.rep),f1=v=>v==null?'—':v.toFixed(1).replace('.',',');
+ const media=ok.length?ok.reduce((s,r)=>s+r.m,0)/ok.length:null,cumple=ok.filter(r=>r.m<=NORMA_ANUAL).length,oms=ok.filter(r=>r.m<=OMS_ANUAL).length;
+ $('akp').innerHTML=[[f1(media),'Promedio de las estaciones con representatividad (µg/m³)'],[ok.length+' de '+R.length,'Estaciones con datos suficientes en '+y],[ok.length?cumple+' de '+ok.length:'—','Cumplen la norma nacional (≤ '+NORMA_ANUAL+' µg/m³)'],[ok.length?oms+' de '+ok.length:'—','Dentro de la guía OMS 2021 (≤ '+OMS_ANUAL+' µg/m³)']].concat(REF_NACIONAL[y]?[[String(REF_NACIONAL[y].v).replace('.',','),'Media nacional PM2.5 '+y+' · '+REF_NACIONAL[y].n+' estaciones (IDEAM)']]:[]).map(k=>`<div class="kp"><b>${k[0]}</b><span>${k[1]}</span></div>`).join('');
+ $('canual').parentElement.style.height=(R.length*46+70)+'px';
+ const lineas={id:'lin',afterDatasetsDraw(c){const{ctx,chartArea:A,scales:{x}}=c;ctx.save();ctx.font='11px system-ui,sans-serif';[[NORMA_ANUAL,'#c62828','Norma nacional '+NORMA_ANUAL],[OMS_ANUAL,'#00803a','OMS '+OMS_ANUAL]].concat(REF_NACIONAL[YR_A]?[[REF_NACIONAL[YR_A].v,'#1565c0','Media nacional '+String(REF_NACIONAL[YR_A].v).replace('.',',')]]:[]).forEach(([v,col,t])=>{const X=x.getPixelForValue(v);if(X<A.left||X>A.right)return;ctx.strokeStyle=col;ctx.lineWidth=1.6;ctx.setLineDash([5,4]);ctx.beginPath();ctx.moveTo(X,A.top);ctx.lineTo(X,A.bottom);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle=col;ctx.textAlign='left';ctx.fillText(t,X+4,A.top+10)});ctx.restore()}};
+ CA=new Chart($('canual'),{type:'bar',plugins:[lineas],data:{labels:R.map(r=>r.e),datasets:[{data:R.map(r=>r.m==null?null:+r.m.toFixed(1)),borderRadius:4,barThickness:26,backgroundColor:R.map(r=>r.m==null?'#ccc':r.rep?bandaA(r.m)[1]:'#c9d3dc'),borderColor:R.map(r=>r.m!=null&&!r.rep?'#8a99a6':'transparent'),borderWidth:R.map(r=>r.m!=null&&!r.rep?1.5:0)}]},
+  options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>{const r=R[c.dataIndex];return r.m==null?'Sin datos':f1(r.m)+' µg/m³'+(r.rep?'':' (sin representatividad)')}}}},scales:{x:{min:0,suggestedMax:Math.max(30,Math.ceil((Math.max(...R.map(r=>r.m||0))+3)/5)*5),title:{display:true,text:'PM2.5 promedio anual (µg/m³)'},grid:{color:'#e6edf3'}},y:{grid:{display:false}}}}});
+ $('aleg').innerHTML=BANDAS.map(b=>`<span><i style="background:${b[1]}"></i>${b[2]}</span>`).join('')+'<span><i style="background:#c9d3dc;border:1.5px solid #8a99a6"></i>Sin representatividad</span>';
+ const pr=r=>r.n?(r.pct*100).toFixed(0)+' %':'—';
+ $('atab').innerHTML='<tr><th>Estación</th><th>Promedio (µg/m³)</th><th>Horas con dato</th><th>% del periodo</th><th>Representatividad</th><th>Norma nacional</th><th>Guía OMS</th>'+(REF_NACIONAL[y]?'<th>Frente a la media nacional</th>':'')+'</tr>'+R.map(r=>`<tr><td>${r.e}</td><td>${f1(r.m)}</td><td>${r.n.toLocaleString('es-CO')} de ${r.tot.toLocaleString('es-CO')}</td><td>${pr(r)}</td><td>${r.m==null?'Sin datos':r.rep?'Sí':'No (< 75 %)'}</td><td>${r.rep?(r.m<=NORMA_ANUAL?'<b class="si">Cumple</b>':'<b class="no">No cumple</b>'):'—'}</td><td>${r.rep?(r.m<=OMS_ANUAL?'<b class="si">Dentro</b>':'<b class="no">Supera</b>'):'—'}</td>${REF_NACIONAL[y]?`<td>${r.rep?(r.m<=REF_NACIONAL[y].v?'Por debajo':'Por encima')+' ('+((r.m-REF_NACIONAL[y].v)>=0?'+':'')+(r.m-REF_NACIONAL[y].v).toFixed(1).replace('.',',')+')':'—'}</td>`:''}</tr>`).join('');
+ const par=y===new Date(END*H).getUTCFullYear()&&END<Date.UTC(y+1,0,1)/H;
+ $('anota').innerHTML=`Promedio de todas las horas válidas de PM2.5 del año ${y}${par?' (año en curso, hasta el '+new Date(END*H).toLocaleDateString('es-CO',{timeZone:'UTC'})+')':''}. Un promedio solo se considera representativo si hay dato válido en al menos el 75 % de las horas del periodo; las demás estaciones se muestran en gris y no entran en los conteos. ${REF_NACIONAL[y]?'Media nacional: '+REF_NACIONAL[y].fuente+' ('+REF_NACIONAL[y].n+' estaciones con representatividad temporal); solo se compara el mismo año. ':''}Referencias: norma nacional anual de ${NORMA_ANUAL} µg/m³ (Res. 2254/2017) y guía anual de la OMS 2021 de ${OMS_ANUAL} µg/m³.`}
 const VARS=[['Temperatura (°C)',w=>w.t],['Sensación térmica (°C)',w=>at(w.t,w.r,w.w)],['Humedad relativa (%)',w=>w.r],['Velocidad del viento (m/s)',w=>w.w]];
 const DIRS=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSO','SO','OSO','O','ONO','NO','NNO'];
 const fx=(x,d=1)=>x==null?'—':x.toFixed(d).replace('.',',');
@@ -310,7 +345,7 @@ function years(){const ys=new Set();for(const e in DAY)for(const[dk,d] of DAY[e]
  const a=[...ys].sort((x,y)=>y-x),cur=$('yr').value;$('yr').innerHTML=a.map(y=>`<option>${y}</option>`).join('');if(a.includes(+cur))$('yr').value=cur}
 function info(){const n=ROWS.size;let mn=1e15;ROWS.forEach(r=>{if(r.h<mn)mn=r.h});$('info').textContent=n?`Base actual: ${n.toLocaleString('es-CO')} registros horarios · ${fdt(mn*H)} a ${fdt(END*H)}.`:'Sin datos.'}
 function sel(e){SEL=e;cards();map();chart();cal();trends();heat();stat();t24()}
-function all(){index();years();const d=new Date(END*H);CY=d.getUTCFullYear();CM=d.getUTCMonth();cards();map();chart();cal();trends();heat();dist();stat();legend();info();t24();initRep()}
+function all(){index();years();const d=new Date(END*H);CY=d.getUTCFullYear();CM=d.getUTCMonth();cards();map();chart();cal();trends();heat();dist();anual();stat();legend();info();t24();initRep()}
 function dl(){const f=v=>v==null?'':v,L=[...ROWS.values()].sort((a,b)=>a.e<b.e?-1:a.e>b.e?1:a.h-b.h).map(r=>{const d=new Date(r.h*H);return `${d.getUTCFullYear()}-${p2(d.getUTCMonth()+1)}-${p2(d.getUTCDate())} ${p2(d.getUTCHours())}:00;${r.e};${f(r.a)};${f(r.b)};${f(r.t)};${f(r.r)};${f(r.w)};${f(r.d)}`});
  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufefffecha;estacion;pm25;pm10;temperatura;humedad;viento;direccion\n'+L.join('\n')],{type:'text/csv'}));a.download='base_svca_consolidada.csv';a.click()}
 
@@ -332,7 +367,7 @@ $('pdf').onclick=async()=>{const m=$('rc').value.match(/^(\d{4})-(\d{2})-(\d{2})
  $('info').textContent='Generando el informe…';try{await informe({corte,num:$('rn').value.trim()||'___',elab:$('re').value.trim(),cargoE:$('rce').value.trim(),rev:$('rr').value.trim(),cargoR:$('rcr').value.trim(),obs:$('ro').value.trim()});$('info').textContent='Informe generado.'}catch(x){$('info').textContent='No se pudo generar el informe: '+x.message}};
 $('lin').onclick=()=>{$('lin').classList.add('sel');$('bar').classList.remove('sel');chart()};
 $('bar').onclick=()=>{$('bar').classList.add('sel');$('lin').classList.remove('sel');chart()};
-$('yr').onchange=()=>{heat();dist()};
+$('yr').onchange=()=>{heat();dist();anual()};
 $('pm').onclick=()=>{CM--;if(CM<0){CM=11;CY--}cal()};$('nm').onclick=()=>{CM++;if(CM>11){CM=0;CY++}cal()};
 $('dl').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csvText()],{type:'text/csv'}));a.download='historico.csv';a.click()};
 $('al').onclick=()=>{$('pinw').hidden=!$('pinw').hidden};
@@ -384,11 +419,27 @@ function vreport(names,Ps){const M=new Map(),by={},I=[],ok=t=>`<div class="on">�
  const SP=[];Object.keys(by).forEach(e=>{const m=new Map(by[e].filter(r=>r.a!=null).map(r=>[r.h,r.a]));m.forEach((v,h)=>{if(v<25)return;const nb=[];for(let k=-3;k<=3;k++)if(k&&m.has(h+k))nb.push(m.get(h+k));if(nb.length<4)return;nb.sort((a,b)=>a-b);const md=nb[nb.length>>1];if(v>=3.5*md)SP.push([e,h,v,md])})});
  SP.sort((a,b)=>b[2]/b[3]-a[2]/a[3]);const SPH=SP.length?`<details><summary class="up">⚠ ${N(SP.length)} picos horarios aislados para revisar (PM2.5 ≥ 25 µg/m3 y ≥ 3,5 veces la mediana de las horas vecinas)</summary><div class="tw"><table><tr><th>Estación</th><th>Hora (cierre)</th><th>PM2.5 (µg/m3)</th><th>Mediana vecina</th></tr>${SP.slice(0,20).map(q=>`<tr><td>${q[0]}</td><td>${lab(q[1])}</td><td class="up">${fx(q[2])}</td><td>${fx(q[3])}</td></tr>`).join('')}</table></div><div class="mut">Un pico aislado puede ser real (quema, tráfico) o una falla del equipo. No se elimina automáticamente: quien valida decide.</div></details>`:'';
  return{M,nuevas,Ps,names,periodo:`${fdt(h0*H)} a ${fdt(h1*H)}`,html:I.join('')+'<div class="tw">'+T+'</table></div>'+SPH+'<div class="mut">Rojo = requiere revisión (menos de 75 % del periodo, PM2.5 mayor que PM10, series pegadas o diferencias con lo ya cargado). Los valores altos no se corrigen ni se eliminan: se muestran para que la persona que valida decida.</div>'}}
+let TT=[];
 function clima(e){const M=MET[e];let h=-1;if(M)for(let q=END;q>END-6;q--){const w=M.get(q);if(w&&(w.t!=null||w.w!=null||w.r!=null)){h=q;break}}
  if(h<0){$('now').innerHTML='<div class="mut">Esta estación no tiene datos del clima recientes.</div>';return}
  const w=M.get(h),rg=f=>{const v=[];for(let q=h-23;q<=h;q++){const x=M.get(q),y=x?f(x):null;if(y!=null)v.push(y)}return v.length?`últimas 24 h: ${fx(Math.min(...v),1)} a ${fx(Math.max(...v),1)}`:''},
  T=[['Temperatura','°C',w.t,x=>x.t],['Sensación térmica','°C',at(w.t,w.r,w.w),x=>at(x.t,x.r,x.w)],['Humedad relativa','%',w.r,x=>x.r],['Viento','m/s',w.w,x=>x.w]];
- $('now').innerHTML=T.map(([n,u,v,f])=>`<div class="tile"><small>${n}</small><b>${v==null?'—':fx(v,u==='%'?0:1)+' '+u}</b><small>${n==='Viento'&&v!=null&&w.d!=null?'viene del '+DIRS[Math.round(w.d/22.5)%16]+' · ':''}${rg(f)}</small></div>`).join('');
+const COL=['#e4572e','#e08a00','#1b7fc0','#2ca25f'],UMB=[.3,.3,1,.3];
+ TT=T.map(([n,u,v,f],k)=>{const hs=[],vs=[];for(let q=h-23;q<=h;q++){const x=M.get(q);hs.push(q);const y=x?f(x):null;vs.push(Number.isFinite(y)?y:null)}return{n,u,v,vs,hs,k,f}});
+ $('now').innerHTML=TT.map(({n,u,v,vs,hs,k})=>{const val=vs.filter(x=>x!=null),mn=val.length?Math.min(...val):0,mx=val.length?Math.max(...val):1,span=(mx-mn)||1,X=i=>3+i*114/23,Y=y=>31-(y-mn)/span*28;
+  let d='',pen=false;vs.forEach((y,i)=>{if(y==null){pen=false;return}d+=(pen?'L':'M')+X(i).toFixed(1)+' '+Y(y).toFixed(1)+' ';pen=true});
+  const prev=vs[20],dl=v!=null&&prev!=null?v-prev:null,tr=dl==null?'':Math.abs(dl)<UMB[k]?'→ estable en 3 h':(dl>0?'▲ +':'▼ −')+fx(Math.abs(dl),u==='%'?0:1)+' '+u+' en 3 h',
+  brj=n==='Viento'&&w.d!=null?`<svg class="cmp" viewBox="-20 -20 40 40" role="img" aria-label="El viento viene del ${DIRS[Math.round(w.d/22.5)%16]}"><circle r="17" fill="#fff" stroke="#c5d3de"/><text y="-9.5" font-size="7" text-anchor="middle" fill="#51667a">N</text><g style="transform:rotate(${(w.d+180)%360}deg)"><path d="M0 -11 L4 6 L0 3 L-4 6 Z" fill="#2ca25f"/></g></svg>`:'';
+  return`<div class="tile" data-k="${k}" tabindex="0" role="button" title="Ver el mapa de calor de ${n.toLowerCase()}">${brj}<small>${n}</small><b>${v==null?'—':fx(v,u==='%'?0:1)+' '+u}</b><div class="tr">${tr||'&nbsp;'}</div>
+  <svg class="spk" viewBox="0 0 120 34" preserveAspectRatio="none" data-k="${k}"><path d="${d}" fill="none" stroke="${COL[k]}" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/><line class="vl" y1="0" y2="34" stroke="#0f2b43" stroke-opacity=".35" visibility="hidden"/><circle class="pt" r="3" fill="${COL[k]}" stroke="#fff" stroke-width="1.5" visibility="hidden"/></svg>
+  <small class="sub">${n==='Viento'&&v!=null&&w.d!=null?'viene del '+DIRS[Math.round(w.d/22.5)%16]+' · ':''}${rg(TT[k].f)}</small></div>`}).join('');
+ document.querySelectorAll('#now .tile').forEach(t=>{const k=+t.dataset.k,sv=t.querySelector('.spk'),sub=t.querySelector('.sub'),base=sub.textContent,o=TT[k],
+  go=()=>{const c=$('h'+k);if(c){const cd=c.closest('.card');cd.scrollIntoView({behavior:'smooth',block:'center'});cd.classList.add('flash');setTimeout(()=>cd.classList.remove('flash'),1400)}};
+  sv.addEventListener('pointermove',ev=>{const r=sv.getBoundingClientRect(),i=Math.max(0,Math.min(23,Math.round((ev.clientX-r.left)/r.width*23))),y=o.vs[i],ln=sv.querySelector('.vl'),pt=sv.querySelector('.pt');
+   if(y==null){ln.setAttribute('visibility','hidden');pt.setAttribute('visibility','hidden');sub.textContent=lab(o.hs[i])+' · sin dato';return}
+   const val=o.vs.filter(x=>x!=null),mn=Math.min(...val),sp=(Math.max(...val)-mn)||1,xx=3+i*114/23;ln.setAttribute('x1',xx);ln.setAttribute('x2',xx);ln.setAttribute('visibility','visible');pt.setAttribute('cx',xx);pt.setAttribute('cy',31-(y-mn)/sp*28);pt.setAttribute('visibility','visible');sub.textContent=lab(o.hs[i])+' · '+fx(y,o.u==='%'?0:1)+' '+o.u});
+  sv.addEventListener('pointerleave',()=>{sv.querySelector('.vl').setAttribute('visibility','hidden');sv.querySelector('.pt').setAttribute('visibility','hidden');sub.textContent=base});
+  t.addEventListener('click',go);t.addEventListener('keydown',ev=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();go()}})});
  $('nowt').textContent='Condiciones a las '+lab(h)+(END-h>1?' (último dato disponible)':'')}
 const SC={t:['#2c7bb6','#abd9e9','#ffffbf','#fdae61','#d7191c'],h:['#fff7fb','#a6bddb','#3690c0','#034e7b'],w:['#f7fcfd','#99d8c9','#2ca25f','#00441b']},SCK=['t','t','h','w'];
 function diu(e){const[h0,h1]=per(),R=mrows(e),d0=Math.floor(h0/24),nd=Math.floor(h1/24)-d0+1;
