@@ -1,5 +1,8 @@
 # Historial de versiones
 
+## 1.2.3 · 2026-11-12
+- Corregido: la ficha de la estación (con su foto) quedaba por detrás de los controles del mapa; ahora se muestra por encima de todo.
+
 ## 1.2.0 · 2026-11-09
 - Mapa interactivo (Leaflet + OpenStreetMap, copia local de la librería) con coordenadas reales en `ESTACIONES_GEO`; el administrador arrastra las estaciones y copia las coordenadas.
 - Unidad Móvil con `UBICACIONES_MOVIL`: sitio, municipio, fecha de inicio y foto; funciona en cualquier municipio de Norte de Santander (botón «Ver Unidad Móvil» si está fuera de la vista).
